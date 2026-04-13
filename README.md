@@ -37,4 +37,6 @@ cd docx-reviewer-cleaner
 
 ## 授權
 
-[MIT License](./LICENSE)
+本專案以 [MIT License](./LICENSE) 釋出。
+
+本專案同時內含第三方開源元件（JSZip），其授權資訊請見 [THIRD_PARTY_LICENSES.md](./THIRD_PARTY_LICENSES.md)。
