@@ -104,6 +104,14 @@
     color: var(--muted); font-size: 13px; line-height: 1.55;
   }
   .hidden { display: none; }
+  footer {
+    margin-top: 24px; padding-top: 16px;
+    border-top: 1px solid var(--border);
+    text-align: center; color: var(--muted);
+    font-size: 12px; line-height: 1.6;
+  }
+  footer a { color: var(--muted); text-decoration: underline; }
+  footer a:hover { color: var(--accent); }
 </style>
 </head>
 <body>
@@ -161,6 +169,18 @@
     <span data-i18n="howToBody">1. 選擇一份含追蹤修訂的 .docx 檔案。 2. 在「新名稱」欄輸入想改寫成的名字；留白或與原名相同則不會更動。 3. 按「套用並下載」取得改寫後的新檔案。</span><br />
     <strong data-i18n="privacyLabel">隱私與離線：</strong><span data-i18n="privacyBody">檔案完全在瀏覽器本地處理，不會上傳任何伺服器。本頁已內建 JSZip，無需網路連線即可使用。</span>
   </div>
+
+  <footer>
+    <div data-i18n="footerCopyright">© 2026 Ting-Han Lin · 依 MIT 授權釋出</div>
+    <div data-i18n="footerNotice">本頁使用開源函式庫 JSZip（MIT 授權，版權歸 Stuart Knightley 等作者所有）。</div>
+    <div>
+      <a href="https://github.com/han0302-cyber/docx-reviewer-cleaner" target="_blank" rel="noopener noreferrer">GitHub</a>
+      ·
+      <a href="LICENSE" target="_blank" rel="noopener noreferrer">LICENSE</a>
+      ·
+      <a href="THIRD_PARTY_LICENSES.md" target="_blank" rel="noopener noreferrer" data-i18n="footerThirdParty">第三方授權</a>
+    </div>
+  </footer>
 </div>
 
 <script>
@@ -192,6 +212,9 @@
       errNoMatch: "找不到可套用的修訂者名稱，請確認映射內容",
       okApplied: (n, parts) => `已套用 ${n} 筆變更，涵蓋 ${parts} 個 XML 區塊。`,
       errApply: (msg) => `套用變更失敗：${msg}`,
+      footerCopyright: "© 2026 Ting-Han Lin · 依 MIT 授權釋出",
+      footerNotice: "本頁使用開源函式庫 JSZip（MIT 授權，版權歸 Stuart Knightley 等作者所有）。",
+      footerThirdParty: "第三方授權",
     },
     en: {
       htmlLang: "en",
@@ -219,6 +242,9 @@
       errNoMatch: "Could not find any matching reviewer names. Please review your mapping.",
       okApplied: (n, parts) => `Applied ${n} change${n === 1 ? "" : "s"} across ${parts} XML part${parts === 1 ? "" : "s"}.`,
       errApply: (msg) => `Failed to apply changes: ${msg}`,
+      footerCopyright: "© 2026 Ting-Han Lin · Released under the MIT License",
+      footerNotice: "This page bundles the open-source JSZip library (MIT License, © Stuart Knightley et al.).",
+      footerThirdParty: "Third-party licenses",
     },
     ja: {
       htmlLang: "ja",
@@ -246,6 +272,9 @@
       errNoMatch: "一致する校閲者名が見つかりません。マッピング内容をご確認ください。",
       okApplied: (n, parts) => `${n} 件の変更を ${parts} 個の XML パートに適用しました。`,
       errApply: (msg) => `適用に失敗しました：${msg}`,
+      footerCopyright: "© 2026 Ting-Han Lin · MIT ライセンスのもとで公開",
+      footerNotice: "本ページはオープンソースライブラリ JSZip（MIT ライセンス、© Stuart Knightley ほか）を同梱しています。",
+      footerThirdParty: "第三者ライセンス",
     },
   };
 
