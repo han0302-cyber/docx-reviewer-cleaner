@@ -29,17 +29,11 @@ cd docx-reviewer-cleaner
 
 ## 技術細節
 
-- 單一 `index.html`，無任何建置步驟
-- 使用 [JSZip](https://stuk.github.io/jszip/)（MIT 授權）經 jsDelivr CDN 載入，負責 `.docx` 的解壓與重組
+- 單一 `index.html` + 本地 vendored 的 `jszip.min.js`，無任何建置步驟
+- 使用 [JSZip v3.10.1](https://stuk.github.io/jszip/)（MIT 授權）負責 `.docx` 的解壓與重組
 - `.docx` 內部是 ZIP + XML，工具會掃描所有 `.xml` 成員，用正則替換 `w:author` 與 `w:initials` 屬性
 - 檔案完全在瀏覽器記憶體中處理，不經任何後端
-
-## 離線使用
-
-預設從 CDN 載入 JSZip。若要 100% 離線使用：
-
-1. 下載 [jszip.min.js](https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js) 到本資料夾
-2. 把 `index.html` 內 `<script src="https://..."` 改為 `<script src="jszip.min.js"`
+- 100% 離線可用，不依賴任何 CDN 或網路連線
 
 ## 授權
 
