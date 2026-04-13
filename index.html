@@ -1,0 +1,423 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>DOCX 檢閱者名稱整理</title>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<style>
+  :root {
+    --bg: #f5f6f8;
+    --card: #ffffff;
+    --border: #e3e5ea;
+    --text: #1f2328;
+    --muted: #646b75;
+    --accent: #2b6cb0;
+    --accent-hover: #245a94;
+    --danger: #c0392b;
+    --ok: #2f8f4e;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang TC",
+                 "Microsoft JhengHei", sans-serif;
+    background: var(--bg); color: var(--text);
+    font-size: 14px;
+  }
+  .wrap { max-width: 880px; margin: 32px auto; padding: 0 20px; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  .lead { color: var(--muted); margin: 0 0 20px; }
+  .card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 8px; padding: 20px; margin-bottom: 16px;
+  }
+  .drop {
+    border: 2px dashed var(--border); border-radius: 8px;
+    padding: 32px; text-align: center; cursor: pointer;
+    transition: border-color .15s, background .15s;
+  }
+  .drop:hover, .drop.dragover {
+    border-color: var(--accent); background: #f0f6fc;
+  }
+  .drop p { margin: 4px 0; color: var(--muted); }
+  .drop strong { color: var(--text); }
+  .drop input[type=file] {
+    position: absolute;
+    left: -9999px;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    pointer-events: none;
+  }
+  button {
+    font: inherit; cursor: pointer;
+    padding: 8px 16px; border-radius: 6px;
+    border: 1px solid var(--border); background: #fff; color: var(--text);
+  }
+  button.primary {
+    background: var(--accent); color: #fff; border-color: var(--accent);
+  }
+  button.primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+  button:disabled { opacity: .5; cursor: not-allowed; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td {
+    text-align: left; padding: 10px 8px;
+    border-bottom: 1px solid var(--border); vertical-align: middle;
+  }
+  th { color: var(--muted); font-weight: 600; font-size: 13px; }
+  td.count { color: var(--muted); width: 72px; text-align: right; }
+  td.orig { font-weight: 500; }
+  td input[type=text] {
+    width: 100%; padding: 6px 8px;
+    border: 1px solid var(--border); border-radius: 4px;
+    font: inherit; color: var(--text);
+  }
+  td input[type=text]:focus { outline: none; border-color: var(--accent); }
+  .row { display: flex; align-items: center; gap: 12px; }
+  .row .grow { flex: 1; }
+  .meta { color: var(--muted); font-size: 13px; }
+  .status { margin-top: 12px; font-size: 13px; }
+  .status.ok { color: var(--ok); }
+  .status.err { color: var(--danger); }
+  .hint {
+    margin-top: 16px; padding: 12px 14px;
+    background: #f7f8fa; border: 1px solid var(--border); border-radius: 6px;
+    color: var(--muted); font-size: 13px; line-height: 1.55;
+  }
+  .hidden { display: none; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>DOCX 檢閱者名稱整理</h1>
+  <p class="lead">批次改寫 Word 追蹤修訂（Track Changes）中的檢閱者名稱。檔案完全在瀏覽器本地處理，不會上傳任何伺服器。</p>
+
+  <div class="card" id="uploadCard">
+    <label class="drop" id="drop">
+      <p><strong>點此選擇或拖曳 .docx 檔案</strong></p>
+      <p>僅支援 .docx 格式</p>
+      <input type="file" id="file" accept=".docx" />
+    </label>
+    <div class="status err" id="uploadErr"></div>
+  </div>
+
+  <div class="card hidden" id="editorCard">
+    <div class="row" style="margin-bottom: 12px;">
+      <div class="grow">
+        <div><strong id="fileName"></strong></div>
+        <div class="meta" id="summary"></div>
+      </div>
+      <button id="resetBtn">重新選擇檔案</button>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>原始名稱</th>
+          <th>新名稱</th>
+          <th class="count">修訂數</th>
+        </tr>
+      </thead>
+      <tbody id="authorRows"></tbody>
+    </table>
+
+    <div class="row" style="margin-top: 16px; justify-content: flex-end; gap: 8px;">
+      <button id="resetMapBtn">還原</button>
+      <button class="primary" id="applyBtn">套用並下載</button>
+    </div>
+    <div class="status" id="applyStatus"></div>
+  </div>
+
+  <div class="hint">
+    <strong>使用說明：</strong>
+    1. 選擇一份含追蹤修訂的 .docx 檔案。
+    2. 在「新名稱」欄輸入想改寫成的名字；留白或與原名相同則不會更動。
+    3. 按「套用並下載」取得改寫後的新檔案。<br />
+    <strong>離線使用：</strong>首次載入需要網路抓取 JSZip。若要完全離線，請將
+    <code>https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js</code>
+    下載到本資料夾，並把 <code>&lt;script src&gt;</code> 改為相對路徑。
+  </div>
+</div>
+
+<script>
+(() => {
+  const AUTHOR_TAG_RE = /<[^>]*\bw:author="[^"]*"[^>]*>/g;
+  const AUTHOR_ATTR_RE = /\bw:author="([^"]*)"/;
+  const INITIALS_ATTR_RE = /\bw:initials="([^"]*)"/;
+  const AUTHOR_ATTR_RE_G = /\bw:author="([^"]*)"/g;
+
+  const el = (id) => document.getElementById(id);
+  const dropEl = el("drop");
+  const fileEl = el("file");
+  const uploadCard = el("uploadCard");
+  const uploadErr = el("uploadErr");
+  const editorCard = el("editorCard");
+  const fileNameEl = el("fileName");
+  const summaryEl = el("summary");
+  const rowsEl = el("authorRows");
+  const applyBtn = el("applyBtn");
+  const applyStatus = el("applyStatus");
+  const resetBtn = el("resetBtn");
+  const resetMapBtn = el("resetMapBtn");
+
+  let currentFile = null;
+  let currentZip = null;
+  let authors = [];
+
+  function clearChildren(node) {
+    while (node.firstChild) node.removeChild(node.firstChild);
+  }
+
+  function decodeXml(s) {
+    return s
+      .replace(/&quot;/g, '"')
+      .replace(/&apos;/g, "'")
+      .replace(/&lt;/g, "<")
+      .replace(/&gt;/g, ">")
+      .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(parseInt(n, 10)))
+      .replace(/&#x([0-9a-fA-F]+);/g, (_, n) => String.fromCharCode(parseInt(n, 16)))
+      .replace(/&amp;/g, "&");
+  }
+  function encodeXmlAttr(s) {
+    return String(s)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+  function deriveInitials(value) {
+    const cleaned = String(value || "").split(/\s+/).filter(Boolean).join(" ").trim();
+    if (!cleaned) return "";
+    if (!/\s/.test(cleaned) && cleaned.length <= 8) return cleaned;
+    const asciiTokens = cleaned.match(/[A-Za-z0-9]+/g) || [];
+    if (asciiTokens.length) {
+      const compact = asciiTokens.slice(0, 3).map((t) => t[0].toUpperCase()).join("");
+      if (compact) return compact;
+    }
+    const compact = cleaned.replace(/\s+/g, "");
+    return compact.slice(0, 3);
+  }
+
+  function showError(msg) {
+    uploadErr.textContent = msg || "";
+  }
+
+  async function parseDocx(file) {
+    showError("");
+    applyStatus.textContent = "";
+    applyStatus.className = "status";
+
+    if (!file || !file.name.toLowerCase().endsWith(".docx")) {
+      showError("僅支援 .docx 檔案");
+      return;
+    }
+
+    let zip;
+    try {
+      zip = await JSZip.loadAsync(await file.arrayBuffer());
+    } catch (e) {
+      showError("檔案損毀或不是有效的 .docx 檔案");
+      return;
+    }
+
+    const xmlNames = Object.keys(zip.files).filter(
+      (n) => !zip.files[n].dir && n.toLowerCase().endsWith(".xml")
+    );
+
+    const counts = new Map();
+
+    for (const name of xmlNames) {
+      const text = await zip.file(name).async("string");
+      for (const m of text.matchAll(AUTHOR_ATTR_RE_G)) {
+        const author = decodeXml(m[1]).trim();
+        if (!author) continue;
+        counts.set(author, (counts.get(author) || 0) + 1);
+      }
+    }
+
+    const total = Array.from(counts.values()).reduce((a, b) => a + b, 0);
+    if (total === 0) {
+      showError("檔案內沒有可處理的追蹤修訂者");
+      return;
+    }
+
+    currentFile = file;
+    currentZip = zip;
+    authors = Array.from(counts.entries())
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+
+    fileNameEl.textContent = file.name;
+    summaryEl.textContent = `共 ${authors.length} 位檢閱者，${total} 筆追蹤修訂`;
+    renderRows();
+    uploadCard.classList.add("hidden");
+    editorCard.classList.remove("hidden");
+  }
+
+  function renderRows() {
+    clearChildren(rowsEl);
+    for (const a of authors) {
+      const tr = document.createElement("tr");
+      const tdOrig = document.createElement("td");
+      tdOrig.className = "orig";
+      tdOrig.textContent = a.name;
+      const tdNew = document.createElement("td");
+      const input = document.createElement("input");
+      input.type = "text";
+      input.placeholder = "保留原名";
+      input.dataset.original = a.name;
+      tdNew.appendChild(input);
+      const tdCount = document.createElement("td");
+      tdCount.className = "count";
+      tdCount.textContent = a.count;
+      tr.appendChild(tdOrig);
+      tr.appendChild(tdNew);
+      tr.appendChild(tdCount);
+      rowsEl.appendChild(tr);
+    }
+  }
+
+  function collectMapping() {
+    const mapping = new Map();
+    for (const input of rowsEl.querySelectorAll("input[type=text]")) {
+      const oldName = input.dataset.original;
+      const newName = input.value.trim();
+      if (newName && newName !== oldName) mapping.set(oldName, newName);
+    }
+    return mapping;
+  }
+
+  async function applyAndDownload() {
+    applyStatus.textContent = "";
+    applyStatus.className = "status";
+
+    const mapping = collectMapping();
+    if (mapping.size === 0) {
+      applyStatus.textContent = "沒有可套用的修訂者名稱變更";
+      applyStatus.className = "status err";
+      return;
+    }
+
+    applyBtn.disabled = true;
+    applyStatus.textContent = "處理中…";
+    applyStatus.className = "status";
+
+    try {
+      const xmlNames = Object.keys(currentZip.files).filter(
+        (n) => !currentZip.files[n].dir && n.toLowerCase().endsWith(".xml")
+      );
+
+      const replacementsByAuthor = new Map();
+      const changedParts = new Set();
+
+      for (const name of xmlNames) {
+        const original = await currentZip.file(name).async("string");
+        const updated = original.replace(AUTHOR_TAG_RE, (tag) => {
+          const authorMatch = tag.match(AUTHOR_ATTR_RE);
+          if (!authorMatch) return tag;
+          const currentName = decodeXml(authorMatch[1]).trim();
+          if (!mapping.has(currentName)) return tag;
+
+          const newName = mapping.get(currentName);
+          replacementsByAuthor.set(
+            currentName,
+            (replacementsByAuthor.get(currentName) || 0) + 1
+          );
+          changedParts.add(name);
+
+          let out = tag.replace(
+            AUTHOR_ATTR_RE,
+            `w:author="${encodeXmlAttr(newName)}"`
+          );
+          if (INITIALS_ATTR_RE.test(out)) {
+            const newInitials = deriveInitials(newName);
+            out = out.replace(
+              INITIALS_ATTR_RE,
+              `w:initials="${encodeXmlAttr(newInitials)}"`
+            );
+          }
+          return out;
+        });
+
+        if (updated !== original) {
+          currentZip.file(name, updated);
+        }
+      }
+
+      const totalReplacements = Array.from(replacementsByAuthor.values()).reduce(
+        (a, b) => a + b,
+        0
+      );
+      if (totalReplacements === 0) {
+        applyStatus.textContent = "找不到可套用的修訂者名稱，請確認映射內容";
+        applyStatus.className = "status err";
+        return;
+      }
+
+      const blob = await currentZip.generateAsync({
+        type: "blob",
+        compression: "DEFLATE",
+        mimeType:
+          "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      });
+
+      const base = currentFile.name.replace(/\.docx$/i, "");
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `${base}_renamed.docx`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+
+      applyStatus.textContent = `已套用 ${totalReplacements} 筆變更，涵蓋 ${changedParts.size} 個 XML 區塊。`;
+      applyStatus.className = "status ok";
+
+      currentZip = await JSZip.loadAsync(await currentFile.arrayBuffer());
+    } catch (e) {
+      console.error(e);
+      applyStatus.textContent = "套用變更失敗：" + (e && e.message ? e.message : e);
+      applyStatus.className = "status err";
+    } finally {
+      applyBtn.disabled = false;
+    }
+  }
+
+  function resetAll() {
+    currentFile = null;
+    currentZip = null;
+    authors = [];
+    fileEl.value = "";
+    clearChildren(rowsEl);
+    applyStatus.textContent = "";
+    applyStatus.className = "status";
+    uploadErr.textContent = "";
+    editorCard.classList.add("hidden");
+    uploadCard.classList.remove("hidden");
+  }
+
+  fileEl.addEventListener("change", (e) => {
+    const f = e.target.files && e.target.files[0];
+    if (f) parseDocx(f);
+  });
+  dropEl.addEventListener("dragover", (e) => {
+    e.preventDefault();
+    dropEl.classList.add("dragover");
+  });
+  dropEl.addEventListener("dragleave", () => dropEl.classList.remove("dragover"));
+  dropEl.addEventListener("drop", (e) => {
+    e.preventDefault();
+    dropEl.classList.remove("dragover");
+    const f = e.dataTransfer.files && e.dataTransfer.files[0];
+    if (f) parseDocx(f);
+  });
+  applyBtn.addEventListener("click", applyAndDownload);
+  resetBtn.addEventListener("click", resetAll);
+  resetMapBtn.addEventListener("click", () => {
+    for (const input of rowsEl.querySelectorAll("input[type=text]")) input.value = "";
+  });
+})();
+</script>
+</body>
+</html>
