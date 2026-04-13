@@ -47,14 +47,6 @@
   }
   .drop p { margin: 4px 0; color: var(--muted); }
   .drop strong { color: var(--text); }
-  .drop input[type=file] {
-    position: absolute;
-    left: -9999px;
-    width: 1px;
-    height: 1px;
-    opacity: 0;
-    pointer-events: none;
-  }
   button {
     font: inherit; cursor: pointer;
     padding: 8px 16px; border-radius: 6px;
@@ -99,11 +91,11 @@
   <p class="lead">批次改寫 Word 追蹤修訂（Track Changes）中的檢閱者名稱。檔案完全在瀏覽器本地處理，不會上傳任何伺服器。</p>
 
   <div class="card" id="uploadCard">
-    <label class="drop" id="drop">
+    <div class="drop" id="drop" role="button" tabindex="0">
       <p><strong>點此選擇或拖曳 .docx 檔案</strong></p>
       <p>僅支援 .docx 格式</p>
-      <input type="file" id="file" accept=".docx" />
-    </label>
+    </div>
+    <input type="file" id="file" accept=".docx" hidden />
     <div class="status err" id="uploadErr"></div>
   </div>
 
@@ -405,6 +397,13 @@
   fileEl.addEventListener("change", (e) => {
     const f = e.target.files && e.target.files[0];
     if (f) parseDocx(f);
+  });
+  dropEl.addEventListener("click", () => fileEl.click());
+  dropEl.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      fileEl.click();
+    }
   });
   dropEl.addEventListener("dragover", (e) => {
     e.preventDefault();
