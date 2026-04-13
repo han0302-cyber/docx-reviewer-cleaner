@@ -36,7 +36,12 @@
     border: 2px dashed var(--border); border-radius: 8px;
     padding: 32px; text-align: center; cursor: pointer;
     transition: border-color .15s, background .15s;
+    user-select: none;
+    outline: none;
+    -webkit-tap-highlight-color: transparent;
   }
+  .drop:focus, .drop:focus-visible,
+  .drop *:focus, .drop *:focus-visible { outline: none; }
   .drop:hover, .drop.dragover {
     border-color: var(--accent); background: #f0f6fc;
   }
